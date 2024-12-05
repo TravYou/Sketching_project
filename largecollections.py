@@ -84,41 +84,25 @@ def brute_force_storage(bf_num_bits, capacity, dump_file_paths):
 def aggregate_bloom_filter(bf_num_bits, capacity, dump_file_paths):
     aggregated_filter = BloomFilter(bf_num_bits, int((bf_num_bits / capacity) * math.log(2)))
     total_insertion_time = 0
-
-    tracemalloc.start()
+    total_inserted_elements = 0
 
     for f_file in dump_file_paths:
         bf, insertion_time = create_bloom_filter(bf_num_bits, capacity, f_file)
         total_insertion_time += insertion_time
+        total_inserted_elements += bf.size
 
         # Aggregate current file's Bloom Filter into the combined filter
         for bit_index in range(bf_num_bits):
             aggregated_filter.bit_array[bit_index] |= bf.bit_array[bit_index]
-
-    current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
     
-    print("\n--- Aggregative Summary ---")
-    print(f"Total Construction Time: {total_insertion_time:.2f} seconds")
-    print(f"Combined Bloom Filter Memory Usage: {current / 1e6:.2f} MB")
-    print(f"Peak Memory Footprint: {peak / 1e6:.2f} MB")
+    return total_inserted_elements, total_insertion_time
     
 def sequence_bloom_tree(bf_num_bits, capacity, fasta_files):
-    
-    tracemalloc.start()
-    
+        
     for f_file in fasta_files:
         bloom_filter = create_bloom_filter(bf_num_bits, capacity, f_file)
         sbt_filename = "bloom_filter_sbt.sbt.zip"
         insert_bloom_filter_into_sbt(sbt_filename, bloom_filter, name="bloom_filter_sbt")
-        
-    current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-    
-    print("\n--- Sequence Bloom Filter Summary ---")
-    print(f"Total Construction Time: {total_insertion_time:.2f} seconds")
-    print(f"Combined Bloom Filter Memory Usage: {current / 1e6:.2f} MB")
-    print(f"Peak Memory Footprint: {peak / 1e6:.2f} MB")
         
 def jellyfish_count_and_dump(input_file, dump_file, k_size, output_prefix="output"):
     # Count k-mers
@@ -159,17 +143,32 @@ def main():
                         "/Users/asmitha/CompGenomics/U00096_3.fasta"]
         
     # Creating list of k-mers
+    print("\nCreating Lists of K-mers...")
     k_len = 100
     dump_file_paths = []
+    total_construction_time = []
+    
+    tracemalloc.start()
+    start_time = time.time()
     for file_path in fasta_file_paths:
         base_name = os.path.splitext(os.path.basename(file_path))[0]
         dump_file = f"{base_name}_kmers.txt"
     
-        print(f"\nGenerating k-mers with k={k_len} for insertion...")
+        print(f"\nGenerating k-mers for {base_name} with k={k_len}...")
         dump_file_path = jellyfish_count_and_dump(file_path, dump_file, k_len)
         
         dump_file_paths.append(dump_file_path)
 
+    total_construction_time = time.time() - start_time
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    
+    print("\n--- Summary ---")
+    print(f"Creating K-Mers:")
+    print(f"  Construction Time: {total_construction_time:.2f} seconds")
+    print(f"  Current Memory Usage: {current / 1e6:.2f} MB")
+    print(f"  Peak Memory Footprint: {peak / 1e6:.2f} MB")
+    
     # Brute Force storage of large collections of reads
     print("\nRunning Brute Force Storage Method...")
     

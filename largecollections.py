@@ -9,6 +9,10 @@ import tracemalloc
 from sourmash import MinHash, SourmashSignature
 from sourmash.sbt import SBT, Node
 from sourmash.sbtmh import SigLeaf
+import subprocess
+import os
+
+
 
 # Bloom Filter Implementation
 class BloomFilter:
@@ -20,82 +24,34 @@ class BloomFilter:
 
     def add(self, element):
         for i in range(self.num_hashes):
-            hash_val = mmhmm.hash(element, i, signed=False) % self.num_bits
+            hash_val = mmh3.hash(element, i, signed=False) % self.num_bits
             self.bit_array[hash_val] = 1
         self.size += 1
 
     def __contains__(self, element):
         for i in range(self.num_hashes):
-            hash_val = mmhmm.hash(element, i, signed=False) % self.num_bits
+            hash_val = mmh3.hash(element, i, signed=False) % self.num_bits
             if self.bit_array[hash_val] == 0:
                 return False
         return True
-
-# Function to generate random strings
-def generate_random_strings(num_strings, string_length=10):
-    random_strings = set()
-    while len(random_strings) < num_strings:
-        s = ''.join(random.choices(string.ascii_letters + string.digits, k=string_length))
-        random_strings.add(s)
-    return list(random_strings)
-
-# Function to measure false positive rate
-def measure_false_positive_rate(filter_obj, filter_name, test_data, num_test_items):
-    false_positives = 0
-    for item in test_data:
-        if item in filter_obj:
-            false_positives += 1
-    false_positive_rate = false_positives / num_test_items
-    print(f"{filter_name} False Positive Rate: {false_positive_rate * 100:.4f}%")
-    return false_positive_rate
 
 def create_bloom_filter(bf_num_bits, capacity, f_file):
     bf_bits_per_item = bf_num_bits / capacity
     bf_num_hashes = max(1, int(bf_bits_per_item * math.log(2)))
     bf = BloomFilter(num_bits=bf_num_bits, num_hashes=bf_num_hashes)
     
-    print(f"\n--- Bloom Filter Configuration ---")
-    print(f"Number of bits: {bf_num_bits}")
-    print(f"Number of hashes: {bf_num_hashes}")
-    print(f"Capacity: {capacity} items")
-    print(f"Bits per item: {bf_bits_per_item:.2f} bits")
-    
-    # Generate data for insertion
-    k_len = 10
-    print(f"\nGenerating k-mers with k={k_len} for insertion...")
-    data = retrieve_kmers(k_len, f_file)
-    print(len(data))
-
-    # Start memory tracking
-    tracemalloc.start()
-    
     # Insert elements into Bloom Filter
     print("\nInserting into Bloom Filter...")
     start_time = time.time()
-    for key, value in data.items():
-        bf.add(key)
+    
+    with open(f_file, 'r') as file:
+        for index, line in enumerate(file):
+            if index % 2 == 1: 
+                kmer = line.strip()
+                bf.add(kmer)
+    print("Completed Inserting Elements...")
     bf_insertion_time = time.time() - start_time
     print(f"Bloom Filter inserted {bf.size} elements in {bf_insertion_time:.2f} seconds.")
-    
-    # Stop memory tracking
-    current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-    
-    # Prepare test data for false positive rate measurement
-    num_test_items = 100000
-    test_data = generate_random_strings(num_test_items)
-
-    print("\nMeasuring False Positive Rates...")
-    bf_fpr = measure_false_positive_rate(bf, "Bloom Filter", test_data, num_test_items)
-    
-    print("\n--- Summary ---")
-    print(f"Bloom Filter:")
-    print(f"  Inserted {bf.size} elements")
-    print(f"  Bits per item: {bf_bits_per_item:.2f}")
-    print(f"  False Positive Rate: {bf_fpr * 100:.4f}%")
-    print(f"  Construction Time: {bf_insertion_time:.2f} seconds")
-    print(f"  Current Memory Usage: {current / 1e6:.2f} MB")
-    print(f"  Peak Memory Footprint: {peak / 1e6:.2f} MB")
     
     return bf, bf_insertion_time
     
@@ -111,42 +67,32 @@ def insert_bloom_filter_into_sbt(sbt_file, bloom_filter, name):
 
     sbt.save(sbt_file)
 
-
-def brute_force_storage(bf_num_bits, capacity, fasta_files):
+def brute_force_storage(bf_num_bits, capacity, dump_file_paths):
     total_storage = {}
     total_insertion_time = 0
     total_inserted_elements = 0
-    
-    tracemalloc.start()
-    
-    for f_file, bases in fasta_files.items():
-        new_bf, insertion_time = create_bloom_filter(bf_num_bits, capacity, bases)
+        
+    for file_path in dump_file_paths:
+        new_bf, insertion_time = create_bloom_filter(bf_num_bits, capacity, file_path)
         total_insertion_time += insertion_time
         total_inserted_elements += new_bf.size
-        total_storage[i] = new_bf
-        
-    current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-        
-    print("\n--- Summary ---")
-    print(f"Brute Force:")
-    print(f"  Inserted {total_inserted_elements} elements")
-    print(f"  Construction Time: {total_insertion_time:.2f} seconds")
-    print(f"  Current Memory Usage: {current / 1e6:.2f} MB")
-    print(f"  Peak Memory Footprint: {peak / 1e6:.2f} MB")
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        total_storage[base_name] = new_bf
     
-def aggregate_bloom_filter(bf_num_bits, capacity, fasta_files):
-    aggregated_filter = BloomFilter(f_num_bits, int((f_num_bits / capacity) * math.log(2)))
+    return total_inserted_elements, total_insertion_time
+    
+def aggregate_bloom_filter(bf_num_bits, capacity, dump_file_paths):
+    aggregated_filter = BloomFilter(bf_num_bits, int((bf_num_bits / capacity) * math.log(2)))
     total_insertion_time = 0
 
-    tracemalloc.start(bf_num_bits, capacity, fasta_file_paths)
+    tracemalloc.start()
 
-    for f_file in fasta_files:
+    for f_file in dump_file_paths:
         bf, insertion_time = create_bloom_filter(bf_num_bits, capacity, f_file)
         total_insertion_time += insertion_time
 
         # Aggregate current file's Bloom Filter into the combined filter
-        for bit_index in range(f_num_bits):
+        for bit_index in range(bf_num_bits):
             aggregated_filter.bit_array[bit_index] |= bf.bit_array[bit_index]
 
     current, peak = tracemalloc.get_traced_memory()
@@ -173,41 +119,32 @@ def sequence_bloom_tree(bf_num_bits, capacity, fasta_files):
     print(f"Total Construction Time: {total_insertion_time:.2f} seconds")
     print(f"Combined Bloom Filter Memory Usage: {current / 1e6:.2f} MB")
     print(f"Peak Memory Footprint: {peak / 1e6:.2f} MB")
-    
-def read_fasta_files(file_path):
-    print(file_path)
-    with open(file_path, 'r') as in_file:
-        final_line = ""
-        for line in in_file:
-            if line[0] == '>':
-                continue
-            else:
-                line=line.strip()
-                for c in line:
-                    if c in 'ACGT':
-                        final_line = final_line + c
-    print(len(final_line))
-    return final_line
+        
+def jellyfish_count_and_dump(input_file, dump_file, k_size, output_prefix="output"):
+    # Count k-mers
+    count_cmd = f"jellyfish count -m {k_size} -s 100M -t 10 -C -o {output_prefix} {input_file}"
+    subprocess.run(count_cmd, shell=True, check=True)
 
-def retrieve_kmers(k_len, fasta_file):
-    print(len(fasta_file))
-    index = {}
-    start = 0
-    end = int(k_len)
-    while end < len(fasta_file)+1:
-        sub_string = str(fasta_file[start:end])
-        if sub_string not in index:
-                index[sub_string] = [start]
-        else:
-            index[sub_string].append(start)
+    # Dump k-mers to text file
+    dump_cmd = f"jellyfish dump {output_prefix} > {dump_file}"
+    subprocess.run(dump_cmd, shell=True, check=True)
 
-        end += 1
-    return index
+    # Check if the dump file was created and return its path
+    if os.path.exists(dump_file):
+        return os.path.abspath(dump_file)
+    else:
+        return None
     
 def main():
     # Total bits allocated for each filter
     TOTAL_BITS = 64 * 1024 * 1024 * 8  # 64 MB in bits
     print(f"Total bits allocated for each filter: {TOTAL_BITS}")
+    
+    # Log file for writing analysis to
+    brute_force_log_file = "brute_force_log_file.log"
+    aggregate_bloom_filter_log_file = "aggregate_bloom_filter.log"
+    sequence_bloom_tree_log_file = "sequence_bloom_tree_log_file.log"
+    
 
     # Target capacity: number of items
     capacity = 33_554_432
@@ -217,25 +154,75 @@ def main():
     
     # Collections of reads files
     print("\nParsing Fasta Files...")
-    fasta_file_paths = ["U00096_1.fasta", "U00096_2.fasta", "U00096_3.fasta"]
-    fasta_files = {}
-    for f_file in fasta_file_paths:
-        base_name = f_file.split('.')[0]
-        fasta_files[base_name] = read_fasta_files(f_file)
+    fasta_file_paths = ["/Users/asmitha/CompGenomics/U00096_1.fasta", 
+                        "/Users/asmitha/CompGenomics/U00096_2.fasta", 
+                        "/Users/asmitha/CompGenomics/U00096_3.fasta"]
+        
+    # Creating list of k-mers
+    k_len = 100
+    dump_file_paths = []
+    for file_path in fasta_file_paths:
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        dump_file = f"{base_name}_kmers.txt"
+    
+        print(f"\nGenerating k-mers with k={k_len} for insertion...")
+        dump_file_path = jellyfish_count_and_dump(file_path, dump_file, k_len)
+        
+        dump_file_paths.append(dump_file_path)
 
     # Brute Force storage of large collections of reads
     print("\nRunning Brute Force Storage Method...")
-    brute_force_storage(bf_num_bits, capacity, fasta_files)
+    
+    tracemalloc.start()
+    total_inserted_elements, total_insertion_time = brute_force_storage(bf_num_bits, capacity, dump_file_paths)
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    
+    print("\n--- Summary ---")
+    print(f"Brute Force Storage Method:")
+    print(f"  Inserted {total_inserted_elements} elements")
+    print(f"  Construction Time: {total_insertion_time:.2f} seconds")
+    print(f"  Current Memory Usage: {current / 1e6:.2f} MB")
+    print(f"  Peak Memory Footprint: {peak / 1e6:.2f} MB")
     
     # Aggregate Bloom Filter
     print("\nRunning Combined Bloom Filter Storage Method...")
-    aggregate_bloom_filter(bf_num_bits, capacity, fasta_files)
+    
+    tracemalloc.start()
+    total_inserted_elements, total_insertion_time = aggregate_bloom_filter(bf_num_bits, capacity, dump_file_paths)
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    
+    print("\n--- Summary ---")
+    print(f"Aggregated Bloom Filter Storage Method:")
+    print(f"  Inserted {total_inserted_elements} elements")
+    print(f"  Construction Time: {total_insertion_time:.2f} seconds")
+    print(f"  Current Memory Usage: {current / 1e6:.2f} MB")
+    print(f"  Peak Memory Footprint: {peak / 1e6:.2f} MB")
     
     # Sequence Bloom Tree
     print("\nRunning Sequence Bloom Tree Storage Method...")
-    sequence_bloom_tree(bf_num_bits, capacity, fasta_files)
+    
+    tracemalloc.start()
+    sequence_bloom_tree(bf_num_bits, capacity, dump_file_paths)
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    
+    print("\n--- Summary ---")
+    print(f"Sequence Bloom Filter Storage Method:")
+    print(f"  Inserted {total_inserted_elements} elements")
+    print(f"  Construction Time: {total_insertion_time:.2f} seconds")
+    print(f"  Current Memory Usage: {current / 1e6:.2f} MB")
+    print(f"  Peak Memory Footprint: {peak / 1e6:.2f} MB")  
     
     
 
 if __name__ == "__main__":
     main()
+
+#conda create -n bioenv python=3.12
+#conda activate bioenv
+#conda install -c conda-forge sourmash-minimal
+#conda install mmh3
+#conda install -c conda-forge biopython
+#python3 largecollections.py 

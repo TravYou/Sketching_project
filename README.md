@@ -18,7 +18,7 @@ The command line output from the print statements that result from running each 
 Code Credits: <br>
 Adapted from Sourmash Python API for SBT function - https://sourmash.readthedocs.io/en/v2.3.1/api.html<br>
 Adapted from UMD JellyFish documentation for K-mer counting - https://www.genome.umd.edu/jellyfish.html<br>
-Utilized Perplexity to assist in creating the SearchFunction class for the SBT function - 
-PerplexityAI. (2023). Perplexity [Large language model]. https://www.perplexity.ai
+Utilized ChatGPT to assist in creating the SearchFunction class for the SBT function - 
+OpenAI. (2023). ChatGPT (Mar 13 version) [Large language model]. https://chat.openai.com/chat
 
 

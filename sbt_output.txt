@@ -1,0 +1,40 @@
+Total bits allocated for each filter: 536870912
+
+Parsing Fasta Files...
+
+Creating Lists of K-mers...
+
+Generating k-mers for U00096_1 with k=100...
+
+Generating k-mers for U00096_2 with k=100...
+
+Generating k-mers for U00096_3 with k=100...
+
+Generating k-mers for AE000509_1 with k=100...
+
+Generating k-mers for AE000510_1 with k=100...
+
+--- Summary ---
+Creating K-Mers:
+  Construction Time: 23.57 seconds
+  Current Memory Usage: 0.00 MB
+  Peak Memory Footprint: 0.05 MB
+
+Retrieving K-mer to use for Querying...
+K-mer to query for is: CCAACTGACGGCATTGCAAAAAGCCCAGGAGAGCCAAAAAGCCGAGCTGGAAGGCATTATTAAGCAACAAGCTGCACAACTTAAGCAGGCGAATCGTCAG
+
+Running Sequence Bloom Tree Storage Method...
+
+Querying for the K-mer...
+SBT does not contain the query
+Completed Querying for the K-mer...
+
+--- Summary ---
+SBT Storage Method:
+  Inserted 13742583 elements
+  Insertion Time: 90.20 seconds
+  SBT Construction Time: 90.33 seconds
+  Current Memory Usage: 0.01 MB
+  Peak Memory Footprint: 0.04 MB
+  Query Time: 0.00 seconds
+  Querying Peak Memory Footprint: 0.00 MB

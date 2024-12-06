@@ -8,7 +8,7 @@ from sourmash.sbtmh import SigLeaf
 import subprocess
 import os
 
-# SBT Search Function Implementation (class SearchFunction created with assistance from Perplexity)
+# SBT Search Function Implementation (class SearchFunction created with assistance from ChatGPT)
 class SearchFunction:
     def __init__(self, threshold):
         self.threshold = threshold

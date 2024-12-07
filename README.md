@@ -17,6 +17,8 @@ The command line output from the print statements that result from running each 
 
 Run both benchmarking.py (for bloom and cuckoo) and quotient_benchmarking.py (for quotient) to see how we got the simulated data for our implementations. quotient.py was the first implementation of our custom quotient filter. The amount of inserted elements and capacity can be modified to see the trends that appear as occupancy increases. 
 
+Contributions.txt includes a breakdown of who completed what in our team.
+
 Code Credits: <br>
 Adapted from Sourmash Python API for SBT function - https://sourmash.readthedocs.io/en/v2.3.1/api.html<br>
 Adapted from UMD JellyFish documentation for K-mer counting - https://www.genome.umd.edu/jellyfish.html<br>

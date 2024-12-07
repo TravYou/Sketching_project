@@ -21,7 +21,9 @@ In the main() function, there is a function for each approach called 1) brute_fo
 
 The command line output from the print statements that result from running each appraoch are provided in the following txt files: brute_force_method_output.txt, aggregate_bloom_filter_output.txt, and sbt_output.txt
 
-Run both benchmarking.py (for bloom and cuckoo) and quotient_benchmarking.py (for quotient) to see how we got the simulated data for our implementations. quotient.py was the first implementation of our custom quotient filter. The amount of inserted elements and capacity can be modified to see the trends that appear as occupancy increases. 
+Run both benchmarking.py (for bloom and cuckoo) and quotient_benchmarking.py (for quotient) to see how we got the simulated data for our implementations. quotient.py was the first implementation of our custom quotient filter. The amount of inserted elements and capacity can be modified to see the trends that appear as occupancy increases. Make sure you install the proper libraries.
+conda install mmh3 
+conda install memory-profiler
 
 Contributions.txt includes a breakdown of who completed what in our team.
 

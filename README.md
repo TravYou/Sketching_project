@@ -11,6 +11,12 @@ conda install mmh3<br>
 conda install -c bioconda -c conda-forge sourmash<br>
 python3 largecollections.py <br>
 
+Benchmarking Bloom, Cuckoo, and Quotient Filters:
+The code for this component of the project is located in occupancy_benchmarking.ipynb.
+To run this file, you can use the previously configured bioenv, then install pyprobables and matplotlib:
+conda install pyprobables<br>
+conda install matplotlib<br>
+
 In the main() function, there is a function for each approach called 1) brute_force_storage on line 305, 2) aggregate_bloom_filter on line 309 and 3) sequence_bloom_tree on line 313. Run each approach individually by commenting out the function calls for the other appraoches.
 
 The command line output from the print statements that result from running each appraoch are provided in the following txt files: brute_force_method_output.txt, aggregate_bloom_filter_output.txt, and sbt_output.txt
